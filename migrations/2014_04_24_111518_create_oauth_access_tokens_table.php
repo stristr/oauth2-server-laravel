@@ -1,9 +1,9 @@
 <?php
 
 use Illuminate\Database\Schema\Blueprint;
-use LucaDegasperi\OAuth2Server\Support\AbstractMigration;
+use LucaDegasperi\OAuth2Server\Support\Migration;
 
-class CreateOauthAccessTokensTable extends AbstractMigration
+class CreateOauthAccessTokensTable extends Migration
 {
     /**
      * Run the migrations.
