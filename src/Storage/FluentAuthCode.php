@@ -16,7 +16,7 @@ use League\OAuth2\Server\Entity\ScopeEntity;
 use League\OAuth2\Server\Storage\AuthCodeInterface;
 use Carbon\Carbon;
 
-class FluentAuthCode extends AbstractFluentAdapter implements AuthCodeInterface
+class FluentAuthCode extends FluentAdapter implements AuthCodeInterface
 {
     /**
      * Get the auth code

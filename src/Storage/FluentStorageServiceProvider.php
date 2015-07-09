@@ -12,12 +12,6 @@
 namespace LucaDegasperi\OAuth2Server\Storage;
 
 use Illuminate\Support\ServiceProvider;
-use League\OAuth2\Server\Storage\AccessTokenInterface;
-use League\OAuth2\Server\Storage\AuthCodeInterface;
-use League\OAuth2\Server\Storage\ClientInterface;
-use League\OAuth2\Server\Storage\RefreshTokenInterface;
-use League\OAuth2\Server\Storage\ScopeInterface;
-use League\OAuth2\Server\Storage\SessionInterface;
 
 class FluentStorageServiceProvider extends ServiceProvider
 {
@@ -57,32 +51,32 @@ class FluentStorageServiceProvider extends ServiceProvider
     {
         $provider = $this;
 
-        $this->app->bindShared(FluentAccessToken::class, function () use ($provider) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Storage\FluentAccessToken', function () use ($provider) {
             $storage = new FluentAccessToken($provider->app['db']);
             $storage->setConnectionName($provider->getConnectionName());
             return $storage;
         });
 
-        $this->app->bindShared(FluentAuthCode::class, function () use ($provider) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Storage\FluentAuthCode', function () use ($provider) {
             $storage = new FluentAuthCode($provider->app['db']);
             $storage->setConnectionName($provider->getConnectionName());
             return $storage;
         });
 
-        $this->app->bindShared(FluentClient::class, function ($app) use ($provider) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Storage\FluentClient', function ($app) use ($provider) {
             $limitClientsToGrants = $app['config']->get('oauth2.limit_clients_to_grants');
             $storage = new FluentClient($provider->app['db'], $limitClientsToGrants);
             $storage->setConnectionName($provider->getConnectionName());
             return $storage;
         });
 
-        $this->app->bindShared(FluentRefreshToken::class, function () use ($provider) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Storage\FluentRefreshToken', function () use ($provider) {
             $storage = new FluentRefreshToken($provider->app['db']);
             $storage->setConnectionName($provider->getConnectionName());
             return $storage;
         });
 
-        $this->app->bindShared(FluentScope::class, function ($app) use ($provider) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Storage\FluentScope', function ($app) use ($provider) {
             $limitClientsToScopes = $app['config']->get('oauth2.limit_clients_to_scopes');
             $limitScopesToGrants = $app['config']->get('oauth2.limit_scopes_to_grants');
             $storage = new FluentScope($provider->app['db'], $limitClientsToScopes, $limitScopesToGrants);
@@ -90,7 +84,7 @@ class FluentStorageServiceProvider extends ServiceProvider
             return $storage;
         });
 
-        $this->app->bindShared(FluentSession::class, function () use ($provider) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Storage\FluentSession', function () use ($provider) {
             $storage = new FluentSession($provider->app['db']);
             $storage->setConnectionName($provider->getConnectionName());
             return $storage;
@@ -103,12 +97,12 @@ class FluentStorageServiceProvider extends ServiceProvider
      */
     public function registerInterfaceBindings()
     {
-        $this->app->bind(ClientInterface::class,       FluentClient::class);
-        $this->app->bind(ScopeInterface::class,        FluentScope::class);
-        $this->app->bind(SessionInterface::class,      FluentSession::class);
-        $this->app->bind(AuthCodeInterface::class,     FluentAuthCode::class);
-        $this->app->bind(AccessTokenInterface::class,  FluentAccessToken::class);
-        $this->app->bind(RefreshTokenInterface::class, FluentRefreshToken::class);
+        $this->app->bind('League\OAuth2\Server\Storage\ClientInterface',       'LucaDegasperi\OAuth2Server\Storage\FluentClient');
+        $this->app->bind('League\OAuth2\Server\Storage\ScopeInterface',        'LucaDegasperi\OAuth2Server\Storage\FluentScope');
+        $this->app->bind('League\OAuth2\Server\Storage\SessionInterface',      'LucaDegasperi\OAuth2Server\Storage\FluentSession');
+        $this->app->bind('League\OAuth2\Server\Storage\AuthCodeInterface',     'LucaDegasperi\OAuth2Server\Storage\FluentAuthCode');
+        $this->app->bind('League\OAuth2\Server\Storage\AccessTokenInterface',  'LucaDegasperi\OAuth2Server\Storage\FluentAccessToken');
+        $this->app->bind('League\OAuth2\Server\Storage\RefreshTokenInterface', 'LucaDegasperi\OAuth2Server\Storage\FluentRefreshToken');
     }
 
     /**

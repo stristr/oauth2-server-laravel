@@ -4,12 +4,13 @@ namespace LucaDegasperi\OAuth2Server\Middleware;
 
 use Closure;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Contracts\Routing\Middleware;
 use League\OAuth2\Server\Exception\OAuthException;
 
 /*
 * OAuthExceptionHandlerMiddleware
 */
-class OAuthExceptionHandlerMiddleware
+class OAuthExceptionHandlerMiddleware implements Middleware
 {
     public function handle($request, Closure $next)
     {

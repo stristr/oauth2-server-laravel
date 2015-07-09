@@ -13,53 +13,25 @@ namespace LucaDegasperi\OAuth2Server;
 
 use Carbon\Carbon;
 use Illuminate\Support\ServiceProvider;
-use League\OAuth2\Server\AuthorizationServer;
-use League\OAuth2\Server\ResourceServer;
-use League\OAuth2\Server\Storage\AccessTokenInterface;
-use League\OAuth2\Server\Storage\AuthCodeInterface;
-use League\OAuth2\Server\Storage\ClientInterface;
-use League\OAuth2\Server\Storage\RefreshTokenInterface;
-use League\OAuth2\Server\Storage\ScopeInterface;
-use League\OAuth2\Server\Storage\SessionInterface;
-use LucaDegasperi\OAuth2Server\Middleware\CheckAuthCodeRequestMiddleware;
-use LucaDegasperi\OAuth2Server\Middleware\OAuthMiddleware;
-use LucaDegasperi\OAuth2Server\Middleware\OAuthOwnerMiddleware;
+use LucaDegasperi\OAuth2Server\Filters\CheckAuthCodeRequestFilter;
+use LucaDegasperi\OAuth2Server\Filters\OAuthFilter;
+use LucaDegasperi\OAuth2Server\Filters\OAuthOwnerFilter;
 
 class OAuth2ServerServiceProvider extends ServiceProvider
 {
     /**
-     * Boot the service provider.
-     *
+     * Indicates if loading of the provider is deferred.
+     * @var bool
+     */
+    protected $defer = false;
+
+    /**
+     * Bootstrap the application events.
      * @return void
      */
     public function boot()
     {
-        $this->setupConfig();
-        $this->setupMigrations();
-    }
-    /**
-     * Setup the config.
-     *
-     * @return void
-     */
-    protected function setupConfig()
-    {
-        $source = realpath(__DIR__.'/../config/oauth2.php');
-
-        $this->publishes([$source => config_path('oauth2.php')]);
-
-        $this->mergeConfigFrom($source, 'oauth2');
-    }
-    /**
-     * Setup the migrations.
-     *
-     * @return void
-     */
-    protected function setupMigrations()
-    {
-        $source = realpath(__DIR__.'/../database/migrations/');
-
-        $this->publishes([$source => base_path('/database/migrations')], 'migrations');
+        $this->bootFilters();
     }
 
     /**
@@ -68,8 +40,38 @@ class OAuth2ServerServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        $this->registerAssets();
         $this->registerAuthorizer();
-        $this->registerMiddlewareBindings();
+        $this->registerFilterBindings();
+    }
+
+    /**
+     * Register the assets to be published
+     * @return void
+     */
+    public function registerAssets()
+    {
+        $configPath = __DIR__ . '/../config/oauth2.php';
+        $mFrom = __DIR__ . '/../migrations/';
+        $mTo = $this->app['path.database'] . '/migrations/';
+        $this->mergeConfigFrom($configPath, 'oauth2');
+        $this->publishes([$configPath => config_path('oauth2.php')], 'config');
+        $this->publishes([
+            $mFrom . '2014_04_24_110151_create_oauth_scopes_table.php'              => $mTo . '2015_01_01_000001_create_oauth_scopes_table.php',
+            $mFrom . '2014_04_24_110304_create_oauth_grants_table.php'              => $mTo . '2015_01_01_000002_create_oauth_grants_table.php',
+            $mFrom . '2014_04_24_110403_create_oauth_grant_scopes_table.php'        => $mTo . '2015_01_01_000003_create_oauth_grant_scopes_table.php',
+            $mFrom . '2014_04_24_110459_create_oauth_clients_table.php'             => $mTo . '2015_01_01_000004_create_oauth_clients_table.php',
+            $mFrom . '2014_04_24_110557_create_oauth_client_endpoints_table.php'    => $mTo . '2015_01_01_000005_create_oauth_client_endpoints_table.php',
+            $mFrom . '2014_04_24_110705_create_oauth_client_scopes_table.php'       => $mTo . '2015_01_01_000006_create_oauth_client_scopes_table.php',
+            $mFrom . '2014_04_24_110817_create_oauth_client_grants_table.php'       => $mTo . '2015_01_01_000007_create_oauth_client_grants_table.php',
+            $mFrom . '2014_04_24_111002_create_oauth_sessions_table.php'            => $mTo . '2015_01_01_000008_create_oauth_sessions_table.php',
+            $mFrom . '2014_04_24_111109_create_oauth_session_scopes_table.php'      => $mTo . '2015_01_01_000009_create_oauth_session_scopes_table.php',
+            $mFrom . '2014_04_24_111254_create_oauth_auth_codes_table.php'          => $mTo . '2015_01_01_000010_create_oauth_auth_codes_table.php',
+            $mFrom . '2014_04_24_111403_create_oauth_auth_code_scopes_table.php'    => $mTo . '2015_01_01_000011_create_oauth_auth_code_scopes_table.php',
+            $mFrom . '2014_04_24_111518_create_oauth_access_tokens_table.php'       => $mTo . '2015_01_01_000012_create_oauth_access_tokens_table.php',
+            $mFrom . '2014_04_24_111657_create_oauth_access_token_scopes_table.php' => $mTo . '2015_01_01_000013_create_oauth_access_token_scopes_table.php',
+            $mFrom . '2014_04_24_111810_create_oauth_refresh_tokens_table.php'      => $mTo . '2015_01_01_000014_create_oauth_refresh_tokens_table.php',
+        ], 'migrations');
     }
 
     /**
@@ -80,13 +82,13 @@ class OAuth2ServerServiceProvider extends ServiceProvider
     {
         $this->app->bindShared('oauth2-server.authorizer', function ($app) {
             $config = $app['config']->get('oauth2');
-            $issuer = $app->make(AuthorizationServer::class)
-                          ->setClientStorage($app->make(ClientInterface::class))
-                          ->setSessionStorage($app->make(SessionInterface::class))
-                          ->setAuthCodeStorage($app->make(AuthCodeInterface::class))
-                          ->setAccessTokenStorage($app->make(AccessTokenInterface::class))
-                          ->setRefreshTokenStorage($app->make(RefreshTokenInterface::class))
-                          ->setScopeStorage($app->make(ScopeInterface::class))
+            $issuer = $app->make('League\OAuth2\Server\AuthorizationServer')
+                          ->setClientStorage($app->make('League\OAuth2\Server\Storage\ClientInterface'))
+                          ->setSessionStorage($app->make('League\OAuth2\Server\Storage\SessionInterface'))
+                          ->setAuthCodeStorage($app->make('League\OAuth2\Server\Storage\AuthCodeInterface'))
+                          ->setAccessTokenStorage($app->make('League\OAuth2\Server\Storage\AccessTokenInterface'))
+                          ->setRefreshTokenStorage($app->make('League\OAuth2\Server\Storage\RefreshTokenInterface'))
+                          ->setScopeStorage($app->make('League\OAuth2\Server\Storage\ScopeInterface'))
                           ->requireScopeParam($config['scope_param'])
                           ->setDefaultScope($config['default_scope'])
                           ->requireStateParam($config['state_param'])
@@ -99,9 +101,7 @@ class OAuth2ServerServiceProvider extends ServiceProvider
                 $grant->setAccessTokenTTL($grantParams['access_token_ttl']);
 
                 if (array_key_exists('callback', $grantParams)) {
-                    list($className, $method) = array_pad(explode('@', $grantParams['callback']), 2, 'verify');
-                    $verifier = $app->make($className);
-                    $grant->setVerifyCredentialsCallback([$verifier, $method]);
+                    $grant->setVerifyCredentialsCallback($grantParams['callback']);
                 }
                 if (array_key_exists('auth_token_ttl', $grantParams)) {
                     $grant->setAuthTokenTTL($grantParams['auth_token_ttl']);
@@ -112,7 +112,7 @@ class OAuth2ServerServiceProvider extends ServiceProvider
                 $issuer->addGrantType($grant);
             }
 
-            $checker = $app->make(ResourceServer::class);
+            $checker = $app->make('League\OAuth2\Server\ResourceServer');
 
             $authorizer = new Authorizer($issuer, $checker);
             $authorizer->setRequest($app['request']);
@@ -123,29 +123,29 @@ class OAuth2ServerServiceProvider extends ServiceProvider
             return $authorizer;
         });
 
-        $this->app->bind(Authorizer::class, function($app)
+        $this->app->bind('LucaDegasperi\OAuth2Server\Authorizer', function($app)
         {
             return $app['oauth2-server.authorizer'];
         });
     }
 
     /**
-     * Register the Middleware to the IoC container because some middleware need additional parameters
+     * Register the Filters to the IoC container because some filters need additional parameters
      * @return void
      */
-    public function registerMiddlewareBindings()
+    public function registerFilterBindings()
     {
-        $this->app->bindShared(CheckAuthCodeRequestMiddleware::class, function ($app) {
-            return new CheckAuthCodeRequestMiddleware($app['oauth2-server.authorizer']);
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Filters\CheckAuthCodeRequestFilter', function ($app) {
+            return new CheckAuthCodeRequestFilter($app['oauth2-server.authorizer']);
         });
 
-        $this->app->bindShared(OAuthMiddleware::class, function ($app) {
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Filters\OAuthFilter', function ($app) {
             $httpHeadersOnly = $app['config']->get('oauth2.http_headers_only');
-            return new OAuthMiddleware($app['oauth2-server.authorizer'], $httpHeadersOnly);
+            return new OAuthFilter($app['oauth2-server.authorizer'], $httpHeadersOnly);
         });
 
-        $this->app->bindShared(OAuthOwnerMiddleware::class, function ($app) {
-            return new OAuthOwnerMiddleware($app['oauth2-server.authorizer']);
+        $this->app->bindShared('LucaDegasperi\OAuth2Server\Filters\OAuthOwnerFilter', function ($app) {
+            return new OAuthOwnerFilter($app['oauth2-server.authorizer']);
         });
     }
 
@@ -157,5 +157,16 @@ class OAuth2ServerServiceProvider extends ServiceProvider
     public function provides()
     {
         return ['oauth2-server.authorizer'];
+    }
+
+    /**
+     * Boot the filters
+     * @return void
+     */
+    private function bootFilters()
+    {
+        $this->app['router']->filter('check-authorization-params', 'LucaDegasperi\OAuth2Server\Filters\CheckAuthCodeRequestFilter');
+        $this->app['router']->filter('oauth', 'LucaDegasperi\OAuth2Server\Filters\OAuthFilter');
+        $this->app['router']->filter('oauth-owner', 'LucaDegasperi\OAuth2Server\Filters\OAuthOwnerFilter');
     }
 }

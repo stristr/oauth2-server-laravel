@@ -17,7 +17,7 @@ use League\OAuth2\Server\Entity\SessionEntity;
 use League\OAuth2\Server\Entity\ScopeEntity;
 use Carbon\Carbon;
 
-class FluentSession extends AbstractFluentAdapter implements SessionInterface
+class FluentSession extends FluentAdapter implements SessionInterface
 {
     /**
      * Get a session from it's identifier
