@@ -16,7 +16,7 @@ use League\OAuth2\Server\Storage\ScopeInterface;
 use League\OAuth2\Server\Entity\ScopeEntity;
 use Carbon\Carbon;
 
-class FluentScope extends FluentAdapter implements ScopeInterface
+class FluentScope extends AbstractFluentAdapter implements ScopeInterface
 {
     protected $limitClientsToScopes = false;
 
